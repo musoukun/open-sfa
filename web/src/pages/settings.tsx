@@ -3,9 +3,10 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Field, PageHeader, StatusBadge } from "@/components/common";
+import { useSearchParams } from "react-router";
+import { ConfirmButton, Field, PageHeader, StatusBadge } from "@/components/common";
 import { authClient } from "@/lib/auth-client";
-import { unwrap, useAction } from "@/lib/hooks";
+import { unwrap, useAction, useGoogleMeetStatus } from "@/lib/hooks";
 
 function ProfileCard() {
   const { data: session, refetch } = authClient.useSession();
@@ -99,12 +100,64 @@ function PasswordCard() {
   );
 }
 
+// サーバーの src/google-meet/rules.ts と同じ値
+const MEET_SCOPE = "https://www.googleapis.com/auth/meetings.space.readonly";
+
+function GoogleCard() {
+  const { data: status } = useGoogleMeetStatus();
+  // 連携に失敗すると、Better Auth が ?error=理由 を付けてこの画面に戻してくる
+  const linkError = useSearchParams()[0].get("error");
+  const link = useAction(() =>
+    unwrap(authClient.linkSocial({ provider: "google", scopes: [MEET_SCOPE], callbackURL: "/settings", errorCallbackURL: "/settings" })),
+  );
+  const unlink = useAction(() => unwrap(authClient.unlinkAccount({ accountId: status?.accountId ?? "" })), { success: "Google との連携を解除しました" });
+  if (!status?.enabled) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Google との連携</CardTitle>
+        <CardDescription>連携すると、Google Meet の会議の URL を貼るだけで、文字起こしを商談の記録に取り込めます</CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-3 text-sm">
+        <div className="flex items-center gap-2">
+          <span className="text-muted-foreground">状態</span>
+          {status.canReadMeet ? (
+            <StatusBadge tone="green">連携済み</StatusBadge>
+          ) : status.accountId ? (
+            <StatusBadge tone="amber">Meet を読む許可が足りません</StatusBadge>
+          ) : (
+            <StatusBadge tone="neutral">未連携</StatusBadge>
+          )}
+        </div>
+        {linkError && <p className="text-destructive">Google との連携に失敗しました（{linkError}）。もう一度お試しください。</p>}
+        <p className="text-xs text-muted-foreground">
+          取り込めるのは、自分が主催か参加した会議で、会議中に「文字起こし」を開始したものだけです。文字起こしは会議から30日を過ぎると取り込めなくなります。
+        </p>
+      </CardContent>
+      <CardFooter className="justify-end gap-2">
+        {status.accountId && (
+          <ConfirmButton title="Google との連携を解除しますか？" description="解除すると、Google Meet の文字起こしを取り込めなくなります。" confirmLabel="解除する" onConfirm={() => unlink.mutate(undefined)}>
+            連携を解除
+          </ConfirmButton>
+        )}
+        {!status.canReadMeet && (
+          <Button onClick={() => link.mutate(undefined)} disabled={link.isPending}>
+            Google と連携する
+          </Button>
+        )}
+      </CardFooter>
+    </Card>
+  );
+}
+
 export function SettingsPage() {
   return (
     <>
       <PageHeader title="個人設定" description="自分のアカウントの設定です" />
       <div className="grid max-w-2xl gap-6">
         <ProfileCard />
+        <GoogleCard />
         <PasswordCard />
       </div>
     </>

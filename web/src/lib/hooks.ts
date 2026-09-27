@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api } from "./api";
-import type { Member } from "./types";
+import type { GoogleMeetStatus, Member } from "./types";
 
 // 保存したら全部の一覧を取り直す。件数の少ない業務アプリなので、これで十分
 export function useAction<V, R = unknown>(
@@ -29,6 +29,10 @@ export async function unwrap<T>(p: Promise<{ data: T | null; error: { message?: 
 
 export function useMembers() {
   return useQuery({ queryKey: ["members"], queryFn: () => api<Member[]>("/members") });
+}
+
+export function useGoogleMeetStatus() {
+  return useQuery({ queryKey: ["google-meet-status"], queryFn: () => api<GoogleMeetStatus>("/google-meet/status") });
 }
 
 export function useActiveMemberOptions(keepIds: (number | null | undefined)[] = []) {

@@ -54,6 +54,10 @@ export type Meeting = {
 
 export type MeetingWithDeal = Meeting & { deal: Deal };
 
+export type GoogleMeetStatus = { enabled: boolean; accountId: string | null; canReadMeet: boolean };
+
+export type ImportedTranscript = Pick<Meeting, "meetingDate" | "attendees" | "content">;
+
 export type DealOverview = Record<OverviewTextKey, string> & {
   cooperationLevel: CooperationLevel | null;
   cooperationNote: string;

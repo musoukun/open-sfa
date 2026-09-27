@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
-import { CalendarDays, ListChecks, Pencil, Users } from "lucide-react";
+import { CalendarDays, Download, ListChecks, Pencil, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,9 +10,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { EmptyRow, Field, PageHeader } from "@/components/common";
 import { api } from "@/lib/api";
-import { useAction } from "@/lib/hooks";
+import { useAction, useGoogleMeetStatus } from "@/lib/hooks";
 import { dateTime, todayJst } from "@/lib/format";
-import type { DealDetail, Meeting, MeetingWithDeal } from "@/lib/types";
+import type { DealDetail, ImportedTranscript, Meeting, MeetingWithDeal } from "@/lib/types";
 
 type MeetingForm = Pick<Meeting, "meetingDate" | "title" | "attendees" | "content" | "nextPreparations">;
 
@@ -20,11 +20,66 @@ const EMPTY: MeetingForm = { meetingDate: todayJst(), title: "", attendees: "", 
 
 export const meetingTitle = (m: Pick<Meeting, "title">) => m.title || "（商談名なし）";
 
+// Google Meet の URL を貼ると、文字起こしを取ってきてフォームに入れる。保存はフォームの保存ボタンで行う
+function MeetImport(props: { onImported: (t: ImportedTranscript) => void }) {
+  const { data: status } = useGoogleMeetStatus();
+  const [url, setUrl] = useState("");
+  const load = useAction(() => api<ImportedTranscript>("/google-meet/import", "POST", { meetingUrl: url }), {
+    success: "文字起こしを取り込みました。中身を確かめてから保存してください",
+    onSuccess: (t) => {
+      props.onImported(t);
+      setUrl("");
+    },
+  });
+  if (!status?.enabled) return null;
+  if (!status.canReadMeet) {
+    return (
+      <p className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+        <Link to="/settings" className="text-foreground underline">
+          個人設定
+        </Link>
+        で Google と連携すると、Google Meet の文字起こしを取り込めます。
+      </p>
+    );
+  }
+  return (
+    <Field label="Google Meet から取り込む" htmlFor="mt-meet-url">
+      <div className="flex gap-2">
+        <Input
+          id="mt-meet-url"
+          placeholder="https://meet.google.com/xxx-xxxx-xxx"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          // このフォームは商談の保存フォームの中にあるので、Enter で保存が走らないようにする
+          onKeyDown={(e) => {
+            if (e.key !== "Enter") return;
+            e.preventDefault();
+            if (url.trim()) load.mutate(undefined);
+          }}
+        />
+        <Button type="button" variant="outline" disabled={!url.trim() || load.isPending} onClick={() => load.mutate(undefined)}>
+          <Download />
+          {load.isPending ? "取り込み中…" : "取り込む"}
+        </Button>
+      </div>
+    </Field>
+  );
+}
+
 function MeetingFields(props: { form: MeetingForm; onChange: (f: MeetingForm) => void }) {
   const { form, onChange } = props;
   const text = (key: keyof MeetingForm) => ({ value: form[key], onChange: (e: { target: { value: string } }) => onChange({ ...form, [key]: e.target.value }) });
+  // 書きかけのメモは消さず、文字起こしを後ろに足す
+  const applyTranscript = (t: ImportedTranscript) =>
+    onChange({
+      ...form,
+      meetingDate: t.meetingDate,
+      attendees: form.attendees || t.attendees,
+      content: form.content ? `${form.content}\n\n${t.content}` : t.content,
+    });
   return (
     <div className="grid gap-5">
+      <MeetImport onImported={applyTranscript} />
       <div className="grid gap-4 sm:grid-cols-[180px_1fr]">
         <Field label="商談日" htmlFor="mt-date">
           <Input id="mt-date" type="date" required {...text("meetingDate")} />

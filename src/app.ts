@@ -8,6 +8,7 @@ import { dealsRoutes } from "./deals/routes";
 import { quotesRoutes } from "./quotes/routes";
 import { dashboardRoutes } from "./dashboard/routes";
 import { meetingsRoutes } from "./meetings/routes";
+import { googleMeetRoutes } from "./google-meet/routes";
 import { overviewRoutes } from "./overviews/routes";
 import { setupRoutes } from "./setup/routes";
 import { approvalRoutes, invitationsRoutes, signupRoutes } from "./invitations/routes";
@@ -24,6 +25,7 @@ const api = new Hono<AppEnv>()
   .route("/quotes", quotesRoutes)
   .route("/dashboard", dashboardRoutes)
   .route("/meetings", meetingsRoutes)
+  .route("/google-meet", googleMeetRoutes)
   .route("/invitations", invitationsRoutes)
   .route("/admin/users", approvalRoutes);
 
