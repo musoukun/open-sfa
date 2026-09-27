@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   LogOut,
   MailPlus,
+  MessagesSquare,
   Settings,
   ShieldCheck,
   Users,
@@ -42,6 +43,7 @@ type NavItem = { title: string; to: string; icon: LucideIcon };
 const SALES_NAV: NavItem[] = [
   { title: "ダッシュボード", to: "/", icon: LayoutDashboard },
   { title: "案件", to: "/deals", icon: Briefcase },
+  { title: "商談", to: "/meetings", icon: MessagesSquare },
   { title: "見積", to: "/quotes", icon: FileText },
   { title: "顧客", to: "/customers", icon: Building2 },
 ];

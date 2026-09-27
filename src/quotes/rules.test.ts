@@ -3,6 +3,16 @@ import assert from "node:assert/strict";
 import { calcTotals, canTransition, formatQuoteNumber, isEditable, lineAmount } from "./rules";
 import { buildMatchKey } from "../customers/rules";
 import { canAddContract, canTransition as canDealTransition } from "../deals/rules";
+import { difficultyOf } from "../overviews/rules";
+
+test("案件の難易度は、協力度と予算・期間の無理のうち悪い方で決まる", () => {
+  assert.equal(difficultyOf("good", "none"), "low");
+  assert.equal(difficultyOf("good", "some"), "medium");
+  assert.equal(difficultyOf("poor", "none"), "high");
+  assert.equal(difficultyOf("normal", "high"), "high");
+  assert.equal(difficultyOf(null, "some"), "medium");
+  assert.equal(difficultyOf(null, null), null);
+});
 
 test("0.5 人月を含む明細の小計・消費税・合計", () => {
   const lines = [

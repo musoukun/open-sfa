@@ -1,5 +1,6 @@
 import type { ContractType, DealStatus } from "@server/deals/rules";
 import type { QuoteStatus } from "@server/quotes/rules";
+import type { CooperationLevel, OverviewTextKey, RiskLevel } from "@server/overviews/rules";
 
 // API は日時を ISO 文字列で返す
 export type Member = { id: number; name: string; email: string | null; isActive: boolean };
@@ -28,6 +29,7 @@ export type Deal = {
   wonAt: string | null;
   customer: Customer;
   salesRep: Member;
+  overview?: Pick<DealOverview, "cooperationLevel" | "riskLevel"> | null;
 };
 
 export type DealContract = {
@@ -37,7 +39,30 @@ export type DealContract = {
   amount: number;
 };
 
-export type MeetingNote = { id: number; dealId: number; meetingDate: string; content: string; authorName: string };
+export type Meeting = {
+  id: number;
+  dealId: number;
+  meetingDate: string;
+  title: string;
+  attendees: string;
+  content: string;
+  nextPreparations: string;
+  authorName: string;
+  version: number;
+  updatedAt: string;
+};
+
+export type MeetingWithDeal = Meeting & { deal: Deal };
+
+export type DealOverview = Record<OverviewTextKey, string> & {
+  cooperationLevel: CooperationLevel | null;
+  cooperationNote: string;
+  riskLevel: RiskLevel | null;
+  riskNote: string;
+  version: number;
+  updatedByName: string;
+  updatedAt: string;
+};
 
 export type Quote = {
   id: number;
@@ -66,7 +91,12 @@ export type QuoteLine = {
 
 export type QuoteHistory = { id: number; fromStatus: QuoteStatus | null; toStatus: QuoteStatus; changedByName: string; changedAt: string };
 
-export type DealDetail = Deal & { contract: DealContract | null; quotes: Quote[]; notes: MeetingNote[] };
+export type DealDetail = Omit<Deal, "overview"> & {
+  contract: DealContract | null;
+  quotes: Quote[];
+  meetings: Meeting[];
+  overview: DealOverview | null;
+};
 export type CustomerDetail = Customer & { deals: Deal[] };
 export type QuoteWithDeal = Quote & { deal: Deal & { customer: Customer } };
 export type QuoteDetail = QuoteWithDeal & { lines: QuoteLine[]; history: QuoteHistory[] };
@@ -75,6 +105,6 @@ export type Dashboard = {
   openDeals: number;
   submittedQuotes: { count: number; total: number };
   wonThisMonth: number;
-  recentNotes: (MeetingNote & { deal: { id: number; name: string } })[];
+  recentMeetings: (Meeting & { deal: { id: number; name: string } })[];
   recentDeals: Deal[];
 };

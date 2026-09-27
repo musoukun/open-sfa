@@ -17,6 +17,13 @@ import {
 import { cn } from "@/lib/utils";
 import { DEAL_STATUS_LABELS, type DealStatus } from "@server/deals/rules";
 import { QUOTE_STATUS_LABELS, type QuoteStatus } from "@server/quotes/rules";
+import {
+  DIFFICULTY_LABELS,
+  difficultyOf,
+  type CooperationLevel,
+  type Difficulty,
+  type RiskLevel,
+} from "@server/overviews/rules";
 
 export function PageHeader(props: { title: ReactNode; description?: ReactNode; actions?: ReactNode }) {
   return (
@@ -60,6 +67,14 @@ export const DealBadge = ({ status }: { status: DealStatus }) => (
 export const QuoteBadge = ({ status }: { status: QuoteStatus }) => (
   <StatusBadge tone={QUOTE_TONE[status]}>{QUOTE_STATUS_LABELS[status]}</StatusBadge>
 );
+
+const DIFFICULTY_TONE = { low: "green", medium: "amber", high: "red" } satisfies Record<Difficulty, Tone>;
+
+export function DifficultyBadge(props: { cooperation: CooperationLevel | null; risk: RiskLevel | null }) {
+  const difficulty = difficultyOf(props.cooperation, props.risk);
+  if (!difficulty) return <StatusBadge tone="neutral">難易度 未評価</StatusBadge>;
+  return <StatusBadge tone={DIFFICULTY_TONE[difficulty]}>難易度 {DIFFICULTY_LABELS[difficulty]}</StatusBadge>;
+}
 
 export function Field(props: { label: string; htmlFor?: string; className?: string; children: ReactNode }) {
   return (

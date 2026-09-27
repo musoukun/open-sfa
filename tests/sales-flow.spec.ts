@@ -48,10 +48,33 @@ test("ログインから見積の承諾・契約概要の登録まで", async ({
   await expect(page).toHaveURL(/\/deals\/\d+$/);
   await expect(page.getByRole("heading", { level: 1 })).toContainText("進行中");
 
-  // 商談メモ
-  await page.getByLabel("内容").fill("要件ヒアリング。予算は2,000万円前後。");
-  await page.getByRole("button", { name: "メモを残す" }).click();
-  await expect(page.getByText("要件ヒアリング。予算は2,000万円前後。", { exact: true })).toBeVisible();
+  // 商談を記録すると、商談の専用ページに移る
+  await page.getByRole("button", { name: "商談を記録する" }).click();
+  await page.getByLabel("商談名").fill("初回ヒアリング");
+  await page.getByLabel("出席した人").fill("先方 事務長／当社 営業");
+  await page.getByLabel("話したこと・分かったこと").fill("要件ヒアリング。予算は2,000万円前後。");
+  await page.getByLabel("次の打ち合わせまでに用意するもの").fill("概算見積");
+  await page.getByRole("button", { name: "記録する" }).click();
+  await expect(page).toHaveURL(/\/meetings\/\d+$/);
+  await expect(page.getByTestId("meeting-next")).toHaveText("概算見積");
+  await shot(page, "11-meeting");
+
+  // 案件概要を書くと、協力度と無理の度合いから難易度が決まる
+  await page.getByRole("link", { name: "案件概要を見る" }).click();
+  await page.getByRole("button", { name: "編集する" }).click();
+  await page.getByLabel("お客さんが今、困っていること").fill("見積の転記ミスが多い");
+  await page.getByLabel("受注に対してブロッカーになるもの").fill("先方の部長の承認が必要");
+  await choose(page, "お客さんの協力度", "協力的");
+  await choose(page, "予算・期間の無理", "少し心配");
+  await page.getByRole("button", { name: "保存する" }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("難易度 中");
+  await expect(page.getByTestId("overview-progress")).toContainText("2 / 18");
+  await shot(page, "12-overview");
+
+  // 案件の画面に、概要の要約と前回の宿題が出る
+  await page.getByRole("link", { name: new RegExp(dealName) }).click();
+  await expect(page.getByText("先方の部長の承認が必要")).toBeVisible();
+  await expect(page.getByText("次の打ち合わせまでに用意するもの（")).toBeVisible();
 
   // 見積（0.5人月を含む2行）。入力中に合計がその場で出る
   await page.getByRole("button", { name: "見積を作る" }).click();

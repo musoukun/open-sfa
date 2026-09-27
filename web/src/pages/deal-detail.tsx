@@ -1,17 +1,17 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Building2, FilePlus2 } from "lucide-react";
+import { Building2, FilePlus2, NotebookPen, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ConfirmButton, DealBadge, EmptyRow, Field, PageHeader, QuoteBadge, SimpleSelect } from "@/components/common";
+import { ConfirmButton, DealBadge, DifficultyBadge, EmptyRow, Field, PageHeader, QuoteBadge, SimpleSelect } from "@/components/common";
+import { meetingTitle } from "./meetings";
 import { api } from "@/lib/api";
 import { useAction, useActiveMemberOptions } from "@/lib/hooks";
-import { todayJst, yen } from "@/lib/format";
+import { yen } from "@/lib/format";
 import type { DealDetail } from "@/lib/types";
 import { CONTRACT_TYPES, CONTRACT_TYPE_LABELS, canAddContract, canCreateQuote } from "@server/deals/rules";
 
@@ -125,49 +125,83 @@ function ContractCard({ deal }: { deal: DealDetail }) {
   );
 }
 
-function NotesCard({ deal }: { deal: DealDetail }) {
-  const [form, setForm] = useState({ meetingDate: todayJst(), content: "" });
-  const add = useAction(() => api(`/deals/${deal.id}/notes`, "POST", form), {
-    success: "商談メモを残しました",
-    onSuccess: () => setForm({ meetingDate: todayJst(), content: "" }),
-  });
-  const submit = (e: FormEvent) => {
-    e.preventDefault();
-    add.mutate(undefined);
-  };
+function OverviewSummaryCard({ deal }: { deal: DealDetail }) {
+  const o = deal.overview;
+  const highlights = [
+    { label: "お客さんが今、困っていること", text: o?.problem },
+    { label: "受注に対してブロッカーになるもの", text: o?.blockers },
+    { label: "まだ分かっていないこと", text: o?.openQuestions },
+  ];
   return (
     <Card>
       <CardHeader>
-        <CardTitle>商談メモ</CardTitle>
+        <CardTitle className="flex items-center gap-3">
+          案件概要 <DifficultyBadge cooperation={o?.cooperationLevel ?? null} risk={o?.riskLevel ?? null} />
+        </CardTitle>
+        <CardDescription>打ち合わせで分かったことを、案件の概要として書き足していきます</CardDescription>
+        <CardAction>
+          <Button size="sm" variant="outline" asChild>
+            <Link to={`/deals/${deal.id}/overview`}>
+              <NotebookPen />
+              {o ? "案件概要を開く" : "案件概要を書く"}
+            </Link>
+          </Button>
+        </CardAction>
       </CardHeader>
-      <CardContent className="grid gap-6">
-        <form onSubmit={submit} className="grid gap-3">
-          <div className="grid gap-3 sm:grid-cols-[160px_1fr]">
-            <Field label="商談日" htmlFor="note-date">
-              <Input id="note-date" type="date" required value={form.meetingDate} onChange={(e) => setForm({ ...form, meetingDate: e.target.value })} />
-            </Field>
-            <Field label="内容" htmlFor="note-content">
-              <Textarea id="note-content" required rows={3} value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} />
-            </Field>
-          </div>
-          <div className="flex justify-end">
-            <Button type="submit" size="sm" disabled={add.isPending}>
-              メモを残す
-            </Button>
-          </div>
-        </form>
-        <ol className="relative grid gap-5 border-l pl-5">
-          {deal.notes.length === 0 && <p className="text-sm text-muted-foreground">まだメモがありません</p>}
-          {deal.notes.map((n) => (
-            <li key={n.id} className="relative">
-              <span className="absolute top-1.5 -left-[25px] size-2.5 rounded-full border-2 border-background bg-primary" />
-              <div className="text-xs text-muted-foreground">
-                {n.meetingDate}・{n.authorName}
-              </div>
-              <p className="mt-1 text-sm whitespace-pre-wrap">{n.content}</p>
-            </li>
+      <CardContent>
+        <dl className="grid gap-4">
+          {highlights.map((h) => (
+            <div key={h.label} className="grid gap-1">
+              <dt className="text-xs font-medium text-muted-foreground">{h.label}</dt>
+              <dd className="line-clamp-3 text-sm whitespace-pre-wrap">{h.text?.trim() || <span className="text-muted-foreground/60">まだ書かれていません</span>}</dd>
+            </div>
           ))}
-        </ol>
+        </dl>
+      </CardContent>
+    </Card>
+  );
+}
+
+function MeetingsCard({ deal }: { deal: DealDetail }) {
+  const navigate = useNavigate();
+  const latest = deal.meetings[0];
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>商談</CardTitle>
+        <CardAction>
+          <Button size="sm" onClick={() => navigate(`/deals/${deal.id}/meetings/new`)}>
+            <Plus />
+            商談を記録する
+          </Button>
+        </CardAction>
+      </CardHeader>
+      <CardContent className="grid gap-4">
+        {latest?.nextPreparations && (
+          <div className="rounded-lg border bg-muted/40 p-3">
+            <div className="text-xs font-medium text-muted-foreground">次の打ち合わせまでに用意するもの（{latest.meetingDate}の商談より）</div>
+            <p className="mt-1 text-sm whitespace-pre-wrap">{latest.nextPreparations}</p>
+          </div>
+        )}
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-28">商談日</TableHead>
+              <TableHead>商談名</TableHead>
+              <TableHead>出席した人</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {deal.meetings.length === 0 && <EmptyRow colSpan={3}>まだ商談の記録がありません</EmptyRow>}
+            {deal.meetings.map((m) => (
+              <TableRow key={m.id} className="cursor-pointer" onClick={() => navigate(`/meetings/${m.id}`)}>
+                <TableCell className="tabular-nums">{m.meetingDate}</TableCell>
+                <TableCell className="font-medium">{meetingTitle(m)}</TableCell>
+                <TableCell className="max-w-56 truncate text-muted-foreground">{m.attendees || "—"}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </CardContent>
     </Card>
   );
@@ -217,6 +251,7 @@ export function DealDetailPage() {
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="grid content-start gap-6 lg:col-span-2">
           <DealInfoCard deal={deal} />
+          <OverviewSummaryCard deal={deal} />
           <Card>
             <CardHeader>
               <CardTitle>見積</CardTitle>
@@ -255,7 +290,7 @@ export function DealDetailPage() {
               </Table>
             </CardContent>
           </Card>
-          <NotesCard deal={deal} />
+          <MeetingsCard deal={deal} />
         </div>
         <div className="grid content-start gap-6">
           <ContractCard key={deal.version} deal={deal} />

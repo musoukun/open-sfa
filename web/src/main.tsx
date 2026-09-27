@@ -17,6 +17,8 @@ import { SettingsPage } from "@/pages/settings";
 import { ForgotPasswordPage, ResetPasswordPage } from "@/pages/password-pages";
 import { SignupPage } from "@/pages/signup";
 import { InvitationsPage } from "@/pages/invitations";
+import { DealOverviewPage } from "@/pages/deal-overview";
+import { MeetingDetailPage, MeetingsPage, NewMeetingPage } from "@/pages/meetings";
 import "./index.css";
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } } });
@@ -33,6 +35,10 @@ const router = createBrowserRouter([
       { index: true, element: <DashboardPage /> },
       { path: "deals", element: <DealsPage /> },
       { path: "deals/:id", element: <DealDetailPage /> },
+      { path: "deals/:id/overview", element: <DealOverviewPage /> },
+      { path: "deals/:id/meetings/new", element: <NewMeetingPage /> },
+      { path: "meetings", element: <MeetingsPage /> },
+      { path: "meetings/:id", element: <MeetingDetailPage /> },
       { path: "quotes", element: <QuotesPage /> },
       { path: "quotes/new", element: <NewQuotePage /> },
       { path: "quotes/:id", element: <QuoteDetailPage /> },

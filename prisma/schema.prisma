@@ -56,7 +56,8 @@ model Deal {
   updatedAt  DateTime      @updatedAt
   contract   DealContract?
   quotes     Quote[]
-  notes      MeetingNote[]
+  meetings   Meeting[]
+  overview   DealOverview?
 
   @@index([salesRepId])
   @@index([customerId])
@@ -152,18 +153,60 @@ model Invitation {
   @@map("invitations")
 }
 
-model MeetingNote {
-  id          Int      @id @default(autoincrement())
-  dealId      Int
-  deal        Deal     @relation(fields: [dealId], references: [id])
-  meetingDate String
-  content     String
-  authorId    String
-  authorName  String
-  createdAt   DateTime @default(now())
+// 打ち合わせ1回分の記録。以前の「商談メモ」のテーブルをそのまま使う
+model Meeting {
+  id               Int      @id @default(autoincrement())
+  dealId           Int
+  deal             Deal     @relation(fields: [dealId], references: [id])
+  meetingDate      String
+  title            String   @default("")
+  attendees        String   @default("")
+  // 話したこと・分かったこと
+  content          String   @default("")
+  nextPreparations String   @default("")
+  authorId         String
+  authorName       String
+  version          Int      @default(1)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @default(now()) @updatedAt
 
   @@index([dealId])
   @@map("meeting_notes")
+}
+
+// 案件ごとに1つ。打ち合わせで分かったことを書き足していく案件の概要
+model DealOverview {
+  id                       Int      @id @default(autoincrement())
+  dealId                   Int      @unique
+  deal                     Deal     @relation(fields: [dealId], references: [id])
+  kickoff                  String   @default("")
+  problem                  String   @default("")
+  goal                     String   @default("")
+  futurePlan               String   @default("")
+  phase                    String   @default("")
+  users                    String   @default("")
+  integrations             String   @default("")
+  scope                    String   @default("")
+  requirements             String   @default("")
+  data                     String   @default("")
+  approach                 String   @default("")
+  deliverables             String   @default("")
+  assumptions              String   @default("")
+  effort                   String   @default("")
+  stakeholders             String   @default("")
+  customerResponsibilities String   @default("")
+  blockers                 String   @default("")
+  openQuestions            String   @default("")
+  cooperationLevel         String?
+  cooperationNote          String   @default("")
+  riskLevel                String?
+  riskNote                 String   @default("")
+  version                  Int      @default(1)
+  updatedById              String
+  updatedByName            String
+  updatedAt                DateTime @updatedAt
+
+  @@map("deal_overviews")
 }
 
 model User {

@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DealBadge, EmptyRow, PageHeader, SimpleSelect } from "@/components/common";
+import { DealBadge, DifficultyBadge, EmptyRow, PageHeader, SimpleSelect } from "@/components/common";
 import { NewDealDialog } from "@/components/new-deal-dialog";
 import { api } from "@/lib/api";
 import { useMembers } from "@/lib/hooks";
@@ -58,11 +58,12 @@ export function DealsPage() {
               <TableHead>顧客</TableHead>
               <TableHead>営業担当</TableHead>
               <TableHead>状態</TableHead>
+              <TableHead>難易度</TableHead>
               <TableHead className="text-right">更新</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {deals?.length === 0 && <EmptyRow colSpan={5}>該当する案件はありません</EmptyRow>}
+            {deals?.length === 0 && <EmptyRow colSpan={6}>該当する案件はありません</EmptyRow>}
             {deals?.map((d) => (
               <TableRow key={d.id} className="cursor-pointer" onClick={() => navigate(`/deals/${d.id}`)}>
                 <TableCell className="font-medium">{d.name}</TableCell>
@@ -72,6 +73,9 @@ export function DealsPage() {
                 <TableCell>{d.salesRep.name}</TableCell>
                 <TableCell>
                   <DealBadge status={d.status} />
+                </TableCell>
+                <TableCell>
+                  <DifficultyBadge cooperation={d.overview?.cooperationLevel ?? null} risk={d.overview?.riskLevel ?? null} />
                 </TableCell>
                 <TableCell className="text-right text-muted-foreground">{shortDate(d.updatedAt)}</TableCell>
               </TableRow>

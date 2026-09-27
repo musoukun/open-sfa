@@ -8,6 +8,7 @@ import { api } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
 import { shortDate, yen } from "@/lib/format";
 import type { Dashboard } from "@/lib/types";
+import { meetingTitle } from "./meetings";
 
 function StatCard(props: { title: string; value: string; sub?: string; icon: LucideIcon; to: string }) {
   return (
@@ -74,16 +75,17 @@ export function DashboardPage() {
             </Card>
             <Card>
               <CardHeader>
-                <CardTitle>最近の商談メモ</CardTitle>
+                <CardTitle>最近の商談</CardTitle>
               </CardHeader>
               <CardContent className="grid gap-3">
-                {data.recentNotes.length === 0 && <p className="text-sm text-muted-foreground">まだ商談メモがありません</p>}
-                {data.recentNotes.map((n) => (
-                  <Link key={n.id} to={`/deals/${n.dealId}`} className="rounded-md px-2 py-1 hover:bg-muted">
+                {data.recentMeetings.length === 0 && <p className="text-sm text-muted-foreground">まだ商談の記録がありません</p>}
+                {data.recentMeetings.map((n) => (
+                  <Link key={n.id} to={`/meetings/${n.id}`} className="rounded-md px-2 py-1 hover:bg-muted">
                     <div className="text-xs text-muted-foreground">
                       {shortDate(n.meetingDate)}・{n.deal.name}・{n.authorName}
                     </div>
-                    <div className="line-clamp-2 text-sm">{n.content}</div>
+                    <div className="text-sm font-medium">{meetingTitle(n)}</div>
+                    <div className="line-clamp-2 text-sm text-muted-foreground">{n.content}</div>
                   </Link>
                 ))}
               </CardContent>

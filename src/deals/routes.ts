@@ -28,11 +28,6 @@ const contractSchema = z
   })
   .refine((v) => v.startDate <= v.endDate, { message: "終了日は開始日以降にしてください" });
 
-const noteSchema = z.object({
-  meetingDate: dateString,
-  content: z.string().trim().min(1, "内容は必須です"),
-});
-
 async function assertActiveMember(id: number) {
   const member = await prisma.member.findUnique({ where: { id } });
   if (!member?.isActive) throw new RuleViolation("無効なメンバーは営業担当に選べません");
@@ -52,7 +47,7 @@ export const dealsRoutes = new Hono<AppEnv>()
       const { salesRepId, status } = c.req.valid("query");
       const deals = await prisma.deal.findMany({
         where: { salesRepId, status },
-        include: { customer: true, salesRep: true },
+        include: { customer: true, salesRep: true, overview: { select: { cooperationLevel: true, riskLevel: true } } },
         orderBy: { updatedAt: "desc" },
       });
       return c.json(deals);
@@ -66,7 +61,8 @@ export const dealsRoutes = new Hono<AppEnv>()
         salesRep: true,
         contract: true,
         quotes: { orderBy: { id: "desc" } },
-        notes: { orderBy: [{ meetingDate: "desc" }, { id: "desc" }] },
+        meetings: { orderBy: [{ meetingDate: "desc" }, { id: "desc" }] },
+        overview: true,
       },
     });
     return deal ? c.json(deal) : c.json({ error: "案件が見つかりません" }, 404);
@@ -117,13 +113,4 @@ export const dealsRoutes = new Hono<AppEnv>()
     }
     const contract = await prisma.dealContract.create({ data: { ...c.req.valid("json"), dealId: id } });
     return c.json(contract, 201);
-  })
-  .post("/:id/notes", validate("param", idParam), validate("json", noteSchema), async (c) => {
-    const { id } = c.req.valid("param");
-    await findDeal(id);
-    const user = c.get("user");
-    const note = await prisma.meetingNote.create({
-      data: { ...c.req.valid("json"), dealId: id, authorId: user.id, authorName: user.name },
-    });
-    return c.json(note, 201);
   });

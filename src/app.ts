@@ -7,6 +7,8 @@ import { customersRoutes } from "./customers/routes";
 import { dealsRoutes } from "./deals/routes";
 import { quotesRoutes } from "./quotes/routes";
 import { dashboardRoutes } from "./dashboard/routes";
+import { meetingsRoutes } from "./meetings/routes";
+import { overviewRoutes } from "./overviews/routes";
 import { setupRoutes } from "./setup/routes";
 import { approvalRoutes, invitationsRoutes, signupRoutes } from "./invitations/routes";
 import { APIError } from "better-auth/api";
@@ -18,8 +20,10 @@ const api = new Hono<AppEnv>()
   .route("/members", membersRoutes)
   .route("/customers", customersRoutes)
   .route("/deals", dealsRoutes)
+  .route("/deals", overviewRoutes)
   .route("/quotes", quotesRoutes)
   .route("/dashboard", dashboardRoutes)
+  .route("/meetings", meetingsRoutes)
   .route("/invitations", invitationsRoutes)
   .route("/admin/users", approvalRoutes);
 

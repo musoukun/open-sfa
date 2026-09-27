@@ -8,18 +8,18 @@ function startOfMonthJst(now = new Date()): Date {
 }
 
 export const dashboardRoutes = new Hono<AppEnv>().get("/", async (c) => {
-  const [openDeals, submitted, wonThisMonth, recentNotes, recentDeals] = await Promise.all([
+  const [openDeals, submitted, wonThisMonth, recentMeetings, recentDeals] = await Promise.all([
     prisma.deal.count({ where: { status: "open" } }),
     prisma.quote.aggregate({ where: { status: "submitted" }, _count: true, _sum: { total: true } }),
     prisma.deal.count({ where: { status: "won", wonAt: { gte: startOfMonthJst() } } }),
-    prisma.meetingNote.findMany({ include: { deal: true }, orderBy: { id: "desc" }, take: 5 }),
+    prisma.meeting.findMany({ include: { deal: true }, orderBy: { id: "desc" }, take: 5 }),
     prisma.deal.findMany({ include: { customer: true, salesRep: true }, orderBy: { updatedAt: "desc" }, take: 5 }),
   ]);
   return c.json({
     openDeals,
     submittedQuotes: { count: submitted._count, total: submitted._sum.total ?? 0 },
     wonThisMonth,
-    recentNotes,
+    recentMeetings,
     recentDeals,
   });
 });
