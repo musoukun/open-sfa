@@ -1,0 +1,218 @@
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Member {
+  id         Int         @id @default(autoincrement())
+  name       String
+  email      String?     @unique
+  isActive   Boolean     @default(true)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  deals      Deal[]
+  quoteLines QuoteLine[]
+
+  @@map("members")
+}
+
+model Customer {
+  id          Int       @id @default(autoincrement())
+  companyName String
+  // 部署なしは空文字で持つ（SQLite の一意制約は NULL を別物として扱うため）
+  department  String    @default("")
+  contactName String?
+  email       String?
+  phone       String?
+  memo        String?
+  // 空白・全角半角を揃えた「会社名＋部署」。重複登録を DB で防ぐ
+  matchKey    String    @unique
+  archivedAt  DateTime?
+  version     Int       @default(1)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deals       Deal[]
+
+  @@map("customers")
+}
+
+model Deal {
+  id         Int           @id @default(autoincrement())
+  customerId Int
+  customer   Customer      @relation(fields: [customerId], references: [id])
+  name       String
+  salesRepId Int
+  salesRep   Member        @relation(fields: [salesRepId], references: [id])
+  status     String        @default("open")
+  wonAt      DateTime?
+  lostAt     DateTime?
+  version    Int           @default(1)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  contract   DealContract?
+  quotes     Quote[]
+  notes      MeetingNote[]
+
+  @@index([salesRepId])
+  @@index([customerId])
+  @@map("deals")
+}
+
+model DealContract {
+  id            Int      @id @default(autoincrement())
+  dealId        Int      @unique
+  deal          Deal     @relation(fields: [dealId], references: [id])
+  contractType  String
+  // 暦日は YYYY-MM-DD の文字列で持ち、タイムゾーン変換をしない
+  startDate     String
+  endDate       String
+  amount        Int
+  sourceQuoteId Int?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("deal_contracts")
+}
+
+model Quote {
+  id          Int                  @id @default(autoincrement())
+  // 作成直後に自動採番の id から書式化して入れる
+  quoteNumber String?              @unique
+  dealId      Int
+  deal        Deal                 @relation(fields: [dealId], references: [id])
+  title       String
+  status      String               @default("draft")
+  validUntil  String?
+  taxRate     Int
+  subtotal    Int
+  tax         Int
+  total       Int
+  version     Int                  @default(1)
+  createdById String
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  lines       QuoteLine[]
+  history     QuoteStatusHistory[]
+
+  @@index([dealId])
+  @@map("quotes")
+}
+
+model QuoteLine {
+  id          Int     @id @default(autoincrement())
+  quoteId     Int
+  quote       Quote   @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  lineNo      Int
+  description String
+  quantity    Float
+  unit        String
+  unitPrice   Int
+  amount      Int
+  assigneeId  Int?
+  assignee    Member? @relation(fields: [assigneeId], references: [id])
+
+  @@index([quoteId])
+  @@map("quote_lines")
+}
+
+// 追記だけで更新・削除しない
+model QuoteStatusHistory {
+  id            Int      @id @default(autoincrement())
+  quoteId       Int
+  quote         Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  fromStatus    String?
+  toStatus      String
+  changedById   String
+  changedByName String
+  changedAt     DateTime @default(now())
+
+  @@index([quoteId])
+  @@map("quote_status_history")
+}
+
+model MeetingNote {
+  id          Int      @id @default(autoincrement())
+  dealId      Int
+  deal        Deal     @relation(fields: [dealId], references: [id])
+  meetingDate String
+  content     String
+  authorId    String
+  authorName  String
+  createdAt   DateTime @default(now())
+
+  @@index([dealId])
+  @@map("meeting_notes")
+}
+
+model User {
+  id            String    @id
+  name          String
+  email         String
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  role          String?
+  banned        Boolean?  @default(false)
+  banReason     String?
+  banExpires    DateTime?
+  sessions      Session[]
+  accounts      Account[]
+
+  @@unique([email])
+  @@map("user")
+}
+
+model Session {
+  id             String   @id
+  expiresAt      DateTime
+  token          String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  ipAddress      String?
+  userAgent      String?
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  impersonatedBy String?
+
+  @@unique([token])
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}

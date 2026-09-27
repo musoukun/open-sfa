@@ -1,0 +1,8 @@
+node_modules
+data
+src/generated
+.env
+test-results
+playwright-report
+# ライセンスの無い参照用コード。公開しない
+reference

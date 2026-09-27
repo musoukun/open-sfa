@@ -1,0 +1,13 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3100:3000"
+    env_file: .env
+    environment:
+      DATABASE_URL: file:/app/data/dev.db
+    volumes:
+      - ./:/app
+      # Linux 用の better-sqlite3 を使うため、ホストの node_modules で上書きしない
+      - /app/node_modules
