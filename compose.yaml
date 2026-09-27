@@ -7,7 +7,20 @@ services:
     env_file: .env
     environment:
       DATABASE_URL: file:/app/data/dev.db
+      # .env に SMTP_HOST などを書けば本物の SMTP サーバーから送る。書かなければ Mailpit に届く
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
     volumes:
       - ./:/app
       # Linux 用の better-sqlite3 を使うため、ホストの node_modules で上書きしない
       - /app/node_modules
+      - /app/web/node_modules
+    depends_on:
+      - mailpit
+
+  # 開発用のメール受信箱。送ったメールは http://localhost:8025 で見られる
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    ports:
+      - "8025:8025"

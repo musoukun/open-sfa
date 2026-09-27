@@ -58,6 +58,19 @@ export const dealsRoutes = new Hono<AppEnv>()
       return c.json(deals);
     },
   )
+  .get("/:id", validate("param", idParam), async (c) => {
+    const deal = await prisma.deal.findUnique({
+      where: { id: c.req.valid("param").id },
+      include: {
+        customer: true,
+        salesRep: true,
+        contract: true,
+        quotes: { orderBy: { id: "desc" } },
+        notes: { orderBy: [{ meetingDate: "desc" }, { id: "desc" }] },
+      },
+    });
+    return deal ? c.json(deal) : c.json({ error: "案件が見つかりません" }, 404);
+  })
   .post("/", validate("json", createDealSchema), async (c) => {
     const input = c.req.valid("json");
     const customer = await prisma.customer.findUnique({ where: { id: input.customerId } });

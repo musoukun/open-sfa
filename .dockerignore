@@ -2,3 +2,6 @@ node_modules
 data
 reference
 src/generated
+web/node_modules
+web/dist
+test-results

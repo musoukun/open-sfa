@@ -135,6 +135,23 @@ model QuoteStatusHistory {
   @@map("quote_status_history")
 }
 
+model Invitation {
+  id            Int       @id @default(autoincrement())
+  email         String
+  // 招待リンクのトークンそのものは保存せず、ハッシュだけ持つ
+  tokenHash     String    @unique
+  invitedById   String
+  invitedByName String
+  // 管理者が招待したら、登録してすぐ使える
+  autoApprove   Boolean
+  expiresAt     DateTime
+  acceptedAt    DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([email])
+  @@map("invitations")
+}
+
 model MeetingNote {
   id          Int      @id @default(autoincrement())
   dealId      Int
@@ -161,6 +178,8 @@ model User {
   banned        Boolean?  @default(false)
   banReason     String?
   banExpires    DateTime?
+  // 一般ユーザーの招待で登録した人は、管理者が承認するまで false
+  approved      Boolean   @default(true)
   sessions      Session[]
   accounts      Account[]
 

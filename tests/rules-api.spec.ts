@@ -18,6 +18,10 @@ test("業務ルールと権限", async () => {
   const suffix = Date.now().toString().slice(-6);
   const admin = await login(process.env["ADMIN_EMAIL"]!, process.env["ADMIN_PASSWORD"]!);
 
+  // ユーザーが1人でもいれば、初回セットアップから管理者は作れない
+  const setup = { name: "乗っ取り", email: `x${suffix}@sfa.test`, password: "password123" };
+  expect((await postJson(admin, "/api/setup", setup)).status).toBe(403);
+
   const member = (await postJson(admin, "/api/members", { name: `担当${suffix}` })).body;
   const customer = (await postJson(admin, "/api/customers", { companyName: `ルール確認${suffix}` })).body;
   const deal = (await postJson(admin, "/api/deals", { customerId: customer.id, name: "案件", salesRepId: member.id })).body;

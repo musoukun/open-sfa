@@ -55,6 +55,24 @@ async function findQuote(id: number) {
 }
 
 export const quotesRoutes = new Hono<AppEnv>()
+  .get("/", async (c) => {
+    const quotes = await prisma.quote.findMany({
+      include: { deal: { include: { customer: true } } },
+      orderBy: { id: "desc" },
+    });
+    return c.json(quotes);
+  })
+  .get("/:id", validate("param", idParam), async (c) => {
+    const quote = await prisma.quote.findUnique({
+      where: { id: c.req.valid("param").id },
+      include: {
+        deal: { include: { customer: true } },
+        lines: { include: { assignee: true }, orderBy: { lineNo: "asc" } },
+        history: { orderBy: { id: "desc" } },
+      },
+    });
+    return quote ? c.json(quote) : c.json({ error: "見積が見つかりません" }, 404);
+  })
   .post("/", validate("json", createQuoteSchema), async (c) => {
     const { dealId, lines, ...input } = c.req.valid("json");
     const deal = await prisma.deal.findUnique({ where: { id: dealId } });

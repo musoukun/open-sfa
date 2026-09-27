@@ -39,9 +39,17 @@ export const customersRoutes = new Hono<AppEnv>()
     const { includeArchived } = c.req.valid("query");
     const customers = await prisma.customer.findMany({
       where: includeArchived ? {} : { archivedAt: null },
+      include: { _count: { select: { deals: true } } },
       orderBy: { companyName: "asc" },
     });
     return c.json(customers);
+  })
+  .get("/:id", validate("param", idParam), async (c) => {
+    const customer = await prisma.customer.findUnique({
+      where: { id: c.req.valid("param").id },
+      include: { deals: { include: { salesRep: true }, orderBy: { updatedAt: "desc" } } },
+    });
+    return customer ? c.json(customer) : c.json({ error: "顧客が見つかりません" }, 404);
   })
   .post("/", validate("json", customerSchema), async (c) => {
     const input = c.req.valid("json");

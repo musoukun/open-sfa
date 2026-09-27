@@ -9,3 +9,5 @@ export const QUOTE_NUMBER_DIGITS = 6;
 export const DEFAULT_QUOTE_VALID_DAYS = 30;
 
 export const DEFAULT_QUOTE_UNIT = "人月";
+
+export const INVITATION_VALID_DAYS = 7;
