@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
-import { CalendarDays, Download, ListChecks, Pencil, Users } from "lucide-react";
+import { CalendarDays, Download, ListChecks, MessageSquareText, Pencil, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -197,6 +197,58 @@ export function NewMeetingPage() {
   );
 }
 
+// 上司や同僚が訪問の記録を読んで、次の打ち手のアドバイスを残す
+function FeedbackCard({ meeting }: { meeting: MeetingWithDeal }) {
+  const [body, setBody] = useState("");
+  const add = useAction(() => api(`/meetings/${meeting.id}/comments`, "POST", { body }), {
+    success: "フィードバックを残しました",
+    onSuccess: () => setBody(""),
+  });
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    add.mutate(undefined);
+  };
+  const comments = meeting.comments ?? [];
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <MessageSquareText className="size-4" />
+          アドバイス・フィードバック
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="grid gap-4">
+        {comments.length === 0 && <p className="text-sm text-muted-foreground">まだありません。次の一手や、使えそうな過去の提案資料などを書いてあげてください。</p>}
+        <ol className="grid gap-3" data-testid="meeting-feedback">
+          {comments.map((c) => (
+            <li key={c.id} className="rounded-lg bg-muted/50 p-3">
+              <div className="text-xs text-muted-foreground">
+                {c.authorName}・{dateTime(c.createdAt)}
+              </div>
+              <p className="mt-1 text-sm whitespace-pre-wrap">{c.body}</p>
+            </li>
+          ))}
+        </ol>
+        <form onSubmit={submit} className="grid gap-2">
+          <Textarea
+            aria-label="フィードバックを書く"
+            rows={3}
+            required
+            placeholder="例: 決裁者が関わる前に、同じ業種で受注した事例資料を先に渡しておくと進みやすい"
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+          />
+          <div className="flex justify-end">
+            <Button type="submit" size="sm" disabled={add.isPending || !body.trim()}>
+              フィードバックを残す
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function MeetingDetailPage() {
   const id = Number(useParams().id);
   const [editing, setEditing] = useState(false);
@@ -265,14 +317,17 @@ export function MeetingDetailPage() {
         </form>
       ) : (
         <div className="grid gap-6 lg:grid-cols-3">
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle>話したこと・分かったこと</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm leading-relaxed whitespace-pre-wrap">{meeting.content || <span className="text-muted-foreground">まだ書かれていません</span>}</p>
-            </CardContent>
-          </Card>
+          <div className="grid content-start gap-6 lg:col-span-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>話したこと・分かったこと</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">{meeting.content || <span className="text-muted-foreground">まだ書かれていません</span>}</p>
+              </CardContent>
+            </Card>
+            <FeedbackCard meeting={meeting} />
+          </div>
           <div className="grid content-start gap-6">
             <Card>
               <CardHeader>

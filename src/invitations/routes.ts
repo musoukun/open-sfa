@@ -8,7 +8,7 @@ import { sendActionMail } from "../lib/mail";
 import { validate } from "../lib/validate";
 import { RuleViolation, requireAdmin, type AppEnv } from "../lib/session";
 
-const APP_URL = process.env["BETTER_AUTH_URL"] ?? "http://localhost:3100";
+const APP_URL = process.env["BETTER_AUTH_URL"] ?? "http://localhost:3099";
 
 const hashToken = (token: string) => createHash("sha256").update(token).digest("hex");
 const idParam = z.object({ id: z.coerce.number().int() });

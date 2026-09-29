@@ -10,19 +10,24 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ConfirmButton, DealBadge, EmptyRow, Field, PageHeader, StatusBadge } from "@/components/common";
+import { ConfirmButton, DealProgressBadge, EmptyRow, Field, PageHeader, SimpleSelect, StatusBadge } from "@/components/common";
+import { INDUSTRIES, type Industry } from "@server/config/sales";
 import { NewDealDialog } from "@/components/new-deal-dialog";
 import { api } from "@/lib/api";
 import { useAction } from "@/lib/hooks";
 import type { Customer, CustomerDetail } from "@/lib/types";
 
-type CustomerForm = { companyName: string; department: string; contactName: string; email: string; phone: string; memo: string };
+type CustomerForm = { companyName: string; department: string; industry: string; contactName: string; email: string; phone: string; memo: string };
 
-const EMPTY: CustomerForm = { companyName: "", department: "", contactName: "", email: "", phone: "", memo: "" };
+const EMPTY: CustomerForm = { companyName: "", department: "", industry: "", contactName: "", email: "", phone: "", memo: "" };
+
+const industryOptions = Object.entries(INDUSTRIES).map(([value, label]) => ({ value, label }));
+const industryLabel = (key: string) => (key ? INDUSTRIES[key as Industry] : "—");
 
 const toForm = (c: Customer): CustomerForm => ({
   companyName: c.companyName,
   department: c.department,
+  industry: c.industry,
   contactName: c.contactName ?? "",
   email: c.email ?? "",
   phone: c.phone ?? "",
@@ -49,6 +54,9 @@ function CustomerFields(props: { form: CustomerForm; onChange: (f: CustomerForm)
     <div className="grid gap-4 sm:grid-cols-2">
       {input("companyName", "会社名")}
       {input("department", "部署")}
+      <Field label="業種" htmlFor={`${idPrefix}-industry`}>
+        <SimpleSelect id={`${idPrefix}-industry`} value={form.industry} onChange={(v) => onChange({ ...form, industry: v })} options={industryOptions} noneLabel="未設定" />
+      </Field>
       {input("contactName", "先方担当者")}
       {input("email", "メール", "email")}
       {input("phone", "電話")}
@@ -119,16 +127,18 @@ export function CustomersPage() {
             <TableRow>
               <TableHead>会社名</TableHead>
               <TableHead>部署</TableHead>
+              <TableHead>業種</TableHead>
               <TableHead>先方担当者</TableHead>
               <TableHead className="text-right">案件数</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {shown?.length === 0 && <EmptyRow colSpan={4}>顧客はありません</EmptyRow>}
+            {shown?.length === 0 && <EmptyRow colSpan={5}>顧客はありません</EmptyRow>}
             {shown?.map((c) => (
               <TableRow key={c.id} className="cursor-pointer" onClick={() => navigate(`/customers/${c.id}`)}>
                 <TableCell className="font-medium">{c.companyName}</TableCell>
                 <TableCell>{c.department}</TableCell>
+                <TableCell>{industryLabel(c.industry)}</TableCell>
                 <TableCell>{c.contactName}</TableCell>
                 <TableCell className="text-right tabular-nums">{c._count?.deals ?? 0}</TableCell>
               </TableRow>
@@ -226,7 +236,7 @@ export function CustomerDetailPage() {
                     <TableCell className="font-medium">{d.name}</TableCell>
                     <TableCell>{d.salesRep.name}</TableCell>
                     <TableCell>
-                      <DealBadge status={d.status} />
+                      <DealProgressBadge status={d.status} stage={d.stage} />
                     </TableCell>
                   </TableRow>
                 ))}

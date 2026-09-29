@@ -15,7 +15,9 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
-import { DEAL_STATUS_LABELS, type DealStatus } from "@server/deals/rules";
+import { DEAL_STAGE_LABELS, DEAL_STATUS_LABELS, MOVEMENT_LABELS, type DealStage, type DealStatus, type Movement } from "@server/deals/rules";
+import { ArrowDownLeft, ArrowUpRight, CircleX, Sparkles, Trophy, type LucideIcon } from "lucide-react";
+import { STAGE_COLORS } from "@/components/pipeline-charts";
 import { QUOTE_STATUS_LABELS, type QuoteStatus } from "@server/quotes/rules";
 import {
   DIFFICULTY_LABELS,
@@ -63,6 +65,36 @@ const QUOTE_TONE = {
 export const DealBadge = ({ status }: { status: DealStatus }) => (
   <StatusBadge tone={DEAL_TONE[status]}>{DEAL_STATUS_LABELS[status]}</StatusBadge>
 );
+
+// 進行中ならフェーズを、受注・失注ならその状態を出す
+export function DealProgressBadge(props: { status: DealStatus; stage: DealStage }) {
+  if (props.status !== "open") return <DealBadge status={props.status} />;
+  return (
+    <Badge variant="outline" className="gap-1.5 font-medium">
+      <span className="size-2 rounded-full" style={{ background: STAGE_COLORS[props.stage] }} />
+      {DEAL_STAGE_LABELS[props.stage]}
+    </Badge>
+  );
+}
+
+const MOVEMENT_STYLE = {
+  new: { tone: "neutral", icon: Sparkles },
+  forward: { tone: "blue", icon: ArrowUpRight },
+  back: { tone: "amber", icon: ArrowDownLeft },
+  won: { tone: "green", icon: Trophy },
+  lost: { tone: "red", icon: CircleX },
+} satisfies Record<Movement, { tone: Tone; icon: LucideIcon }>;
+
+// 案件の動き。色だけに頼らず、アイコンと言葉でも前進・後退などが分かるようにする
+export function MovementBadge({ movement }: { movement: Movement }) {
+  const { tone, icon: Icon } = MOVEMENT_STYLE[movement];
+  return (
+    <StatusBadge tone={tone}>
+      <Icon />
+      {MOVEMENT_LABELS[movement]}
+    </StatusBadge>
+  );
+}
 
 export const QuoteBadge = ({ status }: { status: QuoteStatus }) => (
   <StatusBadge tone={QUOTE_TONE[status]}>{QUOTE_STATUS_LABELS[status]}</StatusBadge>

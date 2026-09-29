@@ -4,7 +4,8 @@ import { prisma } from "../db";
 import { validate } from "../lib/validate";
 import { RuleViolation, VersionConflict, type AppEnv } from "../lib/session";
 import { DEFAULT_QUOTE_UNIT, TAX_RATE_PERCENT } from "../config/business";
-import { canCreateQuote, type DealStatus } from "../deals/rules";
+import { canCreateQuote, type DealStage, type DealStatus } from "../deals/rules";
+import { dealEvent } from "../deals/events";
 import {
   QUOTE_STATUSES,
   calcTotals,
@@ -140,10 +141,11 @@ export const quotesRoutes = new Hono<AppEnv>()
       });
       // 見積が承諾されたら、案件を受注にする
       if (to === "accepted") {
-        await tx.deal.updateMany({
-          where: { id: quote.dealId, status: "open" },
-          data: { status: "won", wonAt: new Date(), version: { increment: 1 } },
-        });
+        const deal = await tx.deal.findUniqueOrThrow({ where: { id: quote.dealId }, select: { status: true, stage: true } });
+        if (deal.status === "open") {
+          await tx.deal.update({ where: { id: quote.dealId }, data: { status: "won", wonAt: new Date(), version: { increment: 1 } } });
+          await tx.dealEvent.create({ data: dealEvent(quote.dealId, "won", deal.stage as DealStage, null, user) });
+        }
       }
     });
     return c.json({ ok: true });

@@ -16,6 +16,6 @@ export default defineConfig({
   },
   server: {
     // 画面だけ手元で動かすときは、API を Docker 上のサーバーへ回す
-    proxy: { "/api": "http://localhost:3100" },
+    proxy: { "/api": "http://localhost:3099" },
   },
 });

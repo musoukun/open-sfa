@@ -1,6 +1,6 @@
 import { expect, request, test, type APIRequestContext } from "@playwright/test";
 
-const baseURL = process.env["E2E_BASE_URL"] ?? "http://localhost:3100";
+const baseURL = process.env["E2E_BASE_URL"] ?? "http://localhost:3099";
 
 async function login(email: string, password: string) {
   const ctx = await request.newContext({ baseURL, extraHTTPHeaders: { Origin: baseURL } });
@@ -44,6 +44,17 @@ test("業務ルールと権限", async () => {
   // 受注していない案件には契約概要を登録できない
   const contract = { contractType: "contract_work", startDate: "2026-10-01", endDate: "2026-12-31", amount: 1000 };
   expect((await postJson(admin, `/api/deals/${deal.id}/contract`, contract)).status).toBe(422);
+
+  // 失注（消滅）は理由が必須。理由と、どのフェーズで落ちたかが「動き」に残る
+  const lossDeal = (await postJson(admin, "/api/deals", { customerId: customer.id, name: "失注する案件", salesRepId: member.id, source: "seminar" })).body;
+  expect((await postJson(admin, `/api/deals/${lossDeal.id}/stage`, { stage: "proposal", version: 1 })).status).toBe(200);
+  expect((await postJson(admin, `/api/deals/${lossDeal.id}/status`, { to: "lost", version: 2 })).status).toBe(400);
+  expect((await postJson(admin, `/api/deals/${lossDeal.id}/status`, { to: "lost", version: 2, lostReason: "price" })).status).toBe(200);
+  const lostDetail = (await (await admin.get(`/api/deals/${lossDeal.id}`)).json()) as { events: { kind: string; fromStage: string | null }[] };
+  expect(lostDetail.events.map((e) => e.kind)).toEqual(["lost", "stage", "created"]);
+  expect(lostDetail.events[0]!.fromStage).toBe("proposal");
+  const insights = (await (await admin.get("/api/insights")).json()) as { lostByStage: { stage: string; count: number }[] };
+  expect(insights.lostByStage.find((r) => r.stage === "proposal")!.count).toBeGreaterThan(0);
 
   // 一般ユーザーはメンバーを登録できない
   const email = `user${suffix}@sfa.test`;

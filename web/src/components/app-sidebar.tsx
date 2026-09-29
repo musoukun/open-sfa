@@ -2,6 +2,7 @@ import { Link, useLocation, useNavigate } from "react-router";
 import {
   Briefcase,
   Building2,
+  ChartNoAxesColumn,
   ChevronsUpDown,
   FileText,
   LayoutDashboard,
@@ -46,6 +47,7 @@ const SALES_NAV: NavItem[] = [
   { title: "商談", to: "/meetings", icon: MessagesSquare },
   { title: "見積", to: "/quotes", icon: FileText },
   { title: "顧客", to: "/customers", icon: Building2 },
+  { title: "振り返り", to: "/insights", icon: ChartNoAxesColumn },
 ];
 
 const ORG_NAV: NavItem[] = [

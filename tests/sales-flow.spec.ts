@@ -46,7 +46,15 @@ test("ログインから見積の承諾・契約概要の登録まで", async ({
   await choose(page, "営業担当", memberName);
   await page.getByRole("button", { name: "作成" }).click();
   await expect(page).toHaveURL(/\/deals\/\d+$/);
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("進行中");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("計画");
+
+  // フェーズの矢印を押すと、営業パイプライン上の位置が変わる
+  await page.getByTestId("stage-stepper").getByRole("button", { name: "訪問" }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("訪問");
+  await page.getByLabel("見込み金額（税抜・円）").fill("5000000");
+  await page.getByLabel("受注予定月").fill("2026-12");
+  await page.getByRole("button", { name: "保存", exact: true }).click();
+  await expect(page.getByText("案件を保存しました")).toBeVisible();
 
   // 商談を記録すると、商談の専用ページに移る
   await page.getByRole("button", { name: "商談を記録する" }).click();
@@ -57,6 +65,11 @@ test("ログインから見積の承諾・契約概要の登録まで", async ({
   await page.getByRole("button", { name: "記録する" }).click();
   await expect(page).toHaveURL(/\/meetings\/\d+$/);
   await expect(page.getByTestId("meeting-next")).toHaveText("概算見積");
+
+  // 上司が訪問の記録を読んで、アドバイスを残す
+  await page.getByLabel("フィードバックを書く").fill("同じ業種の受注事例を先に渡しておくと進みやすい");
+  await page.getByRole("button", { name: "フィードバックを残す" }).click();
+  await expect(page.getByTestId("meeting-feedback")).toContainText("同じ業種の受注事例を先に渡しておくと進みやすい");
   await shot(page, "11-meeting");
 
   // 案件概要を書くと、協力度と無理の度合いから難易度が決まる

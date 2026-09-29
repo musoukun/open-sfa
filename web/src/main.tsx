@@ -14,6 +14,7 @@ import { CustomerDetailPage, CustomersPage } from "@/pages/customers";
 import { MembersPage } from "@/pages/members";
 import { AdminAccountsPage } from "@/pages/admin-accounts";
 import { SettingsPage } from "@/pages/settings";
+import { InsightsPage } from "@/pages/insights";
 import { ForgotPasswordPage, ResetPasswordPage } from "@/pages/password-pages";
 import { SignupPage } from "@/pages/signup";
 import { InvitationsPage } from "@/pages/invitations";
@@ -44,6 +45,7 @@ const router = createBrowserRouter([
       { path: "quotes/:id", element: <QuoteDetailPage /> },
       { path: "customers", element: <CustomersPage /> },
       { path: "customers/:id", element: <CustomerDetailPage /> },
+      { path: "insights", element: <InsightsPage /> },
       { path: "members", element: <MembersPage /> },
       { path: "invitations", element: <InvitationsPage /> },
       { path: "settings", element: <SettingsPage /> },

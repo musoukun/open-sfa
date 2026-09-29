@@ -49,19 +49,25 @@ export function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
+  const { data: session } = authClient.useSession();
 
   if (setup.data?.needsSetup) return <Navigate to="/setup" replace />;
+  // ログイン済みでここに来たら（ログイン直後の行き違いも含め）トップへ送る
+  if (session) return <Navigate to="/" replace />;
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setPending(true);
     setError("");
     const { error } = await authClient.signIn.email({ email, password });
-    setPending(false);
     if (error) {
+      setPending(false);
       setError(loginErrorMessage(error));
       return;
     }
+    // 画面側が持っているセッションを最新にしてから移る。古い「未ログイン」でログイン画面に戻されないようにする
+    await authClient.getSession({ query: { disableCookieCache: true } });
+    setPending(false);
     navigate("/");
   };
 

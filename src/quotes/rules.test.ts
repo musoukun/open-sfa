@@ -4,6 +4,75 @@ import { calcTotals, canTransition, formatQuoteNumber, isEditable, lineAmount } 
 import { buildMatchKey } from "../customers/rules";
 import { canAddContract, canTransition as canDealTransition } from "../deals/rules";
 import { difficultyOf } from "../overviews/rules";
+import { expectedDealAmount } from "../deals/rules";
+import { addMonths, buildPipeline } from "../dashboard/pipeline";
+import { movementOf } from "../deals/rules";
+import { fiscalYearOf, fiscalYearRange, lostByStage, summarizeOutcomes } from "../insights/rules";
+
+test("フェーズの移動は、パイプラインの先へ進めば前進、戻れば後退", () => {
+  assert.equal(movementOf("stage", "plan", "proposal"), "forward");
+  assert.equal(movementOf("stage", "closing", "visit"), "back");
+  assert.equal(movementOf("lost", "proposal", null), "lost");
+  assert.equal(movementOf("created", null, "plan"), "new");
+});
+
+test("年度は4月始まりで、日本時間で判定する", () => {
+  assert.equal(fiscalYearOf(new Date("2026-03-31T15:00:00Z")), 2026); // 日本時間 4/1 0:00
+  assert.equal(fiscalYearOf(new Date("2026-03-31T14:59:59Z")), 2025);
+  const { from, to } = fiscalYearRange(2026);
+  assert.equal(from.toISOString(), "2026-03-31T15:00:00.000Z");
+  assert.equal(to.toISOString(), "2027-03-31T15:00:00.000Z");
+});
+
+test("業種別の成績は、決着した案件のうち受注した割合を受注率にする", () => {
+  const rows = summarizeOutcomes(
+    [
+      { key: "retail", status: "won", stage: "closing", amount: 300 },
+      { key: "retail", status: "lost", stage: "proposal", amount: 100 },
+      { key: "retail", status: "open", stage: "plan", amount: null },
+      { key: "", status: "open", stage: "plan", amount: null },
+    ],
+    ["retail", "finance", ""],
+  );
+  assert.deepEqual(rows[0], { key: "retail", total: 3, open: 1, won: 1, lost: 1, wonAmount: 300, winRate: 0.5 });
+  assert.equal(rows.length, 2);
+  assert.equal(rows[1]!.winRate, null);
+  assert.equal(lostByStage([{ status: "lost", stage: "proposal" }]).find((r) => r.stage === "proposal")!.count, 1);
+});
+
+test("見込み金額は入力を優先し、無ければ最新の有効な見積の税抜金額を使う", () => {
+  const quotes = [
+    { status: "declined", subtotal: 900 },
+    { status: "submitted", subtotal: 500 },
+  ];
+  assert.equal(expectedDealAmount(1000, quotes), 1000);
+  assert.equal(expectedDealAmount(null, quotes), 500);
+  assert.equal(expectedDealAmount(null, [{ status: "expired", subtotal: 1 }]), null);
+});
+
+test("月の足し算は年をまたぐ", () => {
+  assert.equal(addMonths("2026-11", 3), "2027-02");
+});
+
+test("パイプラインはフェーズ別と受注予定月別に集計する", () => {
+  const p = buildPipeline(
+    [
+      { stage: "plan", expectedAmount: 100, expectedCloseMonth: "2026-09", quotes: [] },
+      { stage: "plan", expectedAmount: null, expectedCloseMonth: null, quotes: [] },
+      { stage: "closing", expectedAmount: null, expectedCloseMonth: "2026-08", quotes: [{ status: "submitted", subtotal: 300 }] },
+      { stage: "proposal", expectedAmount: 50, expectedCloseMonth: "2027-06", quotes: [] },
+    ],
+    "2026-09",
+  );
+  assert.deepEqual(p.stages.find((s) => s.stage === "plan"), { stage: "plan", count: 2, amount: 100, unpriced: 1 });
+  assert.equal(p.stages.find((s) => s.stage === "closing")!.amount, 300);
+  const month = (key: string) => p.months.find((m) => m.key === key)!;
+  assert.equal(month("overdue").stages.find((s) => s.stage === "closing")!.count, 1);
+  assert.equal(month("2026-09").stages.find((s) => s.stage === "plan")!.amount, 100);
+  assert.equal(month("none").stages.find((s) => s.stage === "plan")!.count, 1);
+  assert.equal(month("later").stages.find((s) => s.stage === "proposal")!.count, 1);
+  assert.deepEqual(p.months.map((m) => m.key).slice(0, 3), ["overdue", "2026-09", "2026-10"]);
+});
 
 test("案件の難易度は、協力度と予算・期間の無理のうち悪い方で決まる", () => {
   assert.equal(difficultyOf("good", "none"), "low");

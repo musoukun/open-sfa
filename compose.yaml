@@ -3,7 +3,7 @@ services:
     build: .
     restart: unless-stopped
     ports:
-      - "3100:3000"
+      - "3099:3000"
     env_file: .env
     environment:
       DATABASE_URL: file:/app/data/dev.db

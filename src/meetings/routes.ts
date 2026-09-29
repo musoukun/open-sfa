@@ -23,7 +23,10 @@ export const meetingsRoutes = new Hono<AppEnv>()
     return c.json(meetings);
   })
   .get("/:id", validate("param", idParam), async (c) => {
-    const meeting = await prisma.meeting.findUnique({ where: { id: c.req.valid("param").id }, include: withDeal });
+    const meeting = await prisma.meeting.findUnique({
+      where: { id: c.req.valid("param").id },
+      include: { ...withDeal, comments: { orderBy: { id: "asc" } } },
+    });
     return meeting ? c.json(meeting) : c.json({ error: "商談が見つかりません" }, 404);
   })
   .post("/", validate("json", meetingFields.extend({ dealId: z.number().int() })), async (c) => {
@@ -32,6 +35,14 @@ export const meetingsRoutes = new Hono<AppEnv>()
     const user = c.get("user");
     const meeting = await prisma.meeting.create({ data: { ...input, authorId: user.id, authorName: user.name } });
     return c.json(meeting, 201);
+  })
+  // 上司や同僚が、訪問の記録を見てアドバイス・フィードバックを残す
+  .post("/:id/comments", validate("param", idParam), validate("json", z.object({ body: z.string().trim().min(1, "内容は必須です").max(5000) })), async (c) => {
+    const { id } = c.req.valid("param");
+    if (!(await prisma.meeting.findUnique({ where: { id } }))) throw new RuleViolation("商談が見つかりません");
+    const user = c.get("user");
+    const comment = await prisma.meetingComment.create({ data: { meetingId: id, body: c.req.valid("json").body, authorId: user.id, authorName: user.name } });
+    return c.json(comment, 201);
   })
   .patch("/:id", validate("param", idParam), validate("json", meetingFields.extend({ version: z.number().int() })), async (c) => {
     const { id } = c.req.valid("param");

@@ -1,4 +1,3 @@
-
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -32,6 +31,8 @@ model Customer {
   memo        String?
   // 空白・全角半角を揃えた「会社名＋部署」。重複登録を DB で防ぐ
   matchKey    String    @unique
+  // 業種（src/config/sales.ts の INDUSTRIES のキー）。未設定は空文字
+  industry    String    @default("")
   archivedAt  DateTime?
   version     Int       @default(1)
   createdAt   DateTime  @default(now())
@@ -42,23 +43,37 @@ model Customer {
 }
 
 model Deal {
-  id         Int           @id @default(autoincrement())
-  customerId Int
-  customer   Customer      @relation(fields: [customerId], references: [id])
-  name       String
-  salesRepId Int
-  salesRep   Member        @relation(fields: [salesRepId], references: [id])
-  status     String        @default("open")
-  wonAt      DateTime?
-  lostAt     DateTime?
-  version    Int           @default(1)
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
-  contract   DealContract?
-  quotes     Quote[]
-  meetings   Meeting[]
-  overview   DealOverview?
+  id                 Int           @id @default(autoincrement())
+  customerId         Int
+  customer           Customer      @relation(fields: [customerId], references: [id])
+  name               String
+  salesRepId         Int
+  salesRep           Member        @relation(fields: [salesRepId], references: [id])
+  status             String        @default("open")
+  // 営業パイプラインのフェーズ（計画・訪問・提案・クロージング）。進行中の案件だけで使う
+  stage              String        @default("plan")
+  stageChangedAt     DateTime      @default(now())
+  // 見込み金額（税抜）。空なら最新の有効な見積の金額を使う
+  expectedAmount     Int?
+  // 受注予定月（YYYY-MM）
+  expectedCloseMonth String?
+  // きっかけ（src/config/sales.ts の DEAL_SOURCES のキー）。未設定は空文字
+  source             String        @default("")
+  // 失注（消滅）の理由（LOST_REASONS のキー）とメモ
+  lostReason         String?
+  lostNote           String        @default("")
+  events             DealEvent[]
+  wonAt              DateTime?
+  lostAt             DateTime?
+  version            Int           @default(1)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  contract           DealContract?
+  quotes             Quote[]
+  meetings           Meeting[]
+  overview           DealOverview?
 
+  @@index([status, stage])
   @@index([salesRepId])
   @@index([customerId])
   @@map("deals")
@@ -155,20 +170,21 @@ model Invitation {
 
 // 打ち合わせ1回分の記録。以前の「商談メモ」のテーブルをそのまま使う
 model Meeting {
-  id               Int      @id @default(autoincrement())
+  id               Int              @id @default(autoincrement())
   dealId           Int
-  deal             Deal     @relation(fields: [dealId], references: [id])
+  deal             Deal             @relation(fields: [dealId], references: [id])
   meetingDate      String
-  title            String   @default("")
-  attendees        String   @default("")
+  title            String           @default("")
+  attendees        String           @default("")
   // 話したこと・分かったこと
-  content          String   @default("")
-  nextPreparations String   @default("")
+  content          String           @default("")
+  nextPreparations String           @default("")
+  comments         MeetingComment[]
   authorId         String
   authorName       String
-  version          Int      @default(1)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @default(now()) @updatedAt
+  version          Int              @default(1)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @default(now()) @updatedAt
 
   @@index([dealId])
   @@map("meeting_notes")
@@ -277,4 +293,35 @@ model Verification {
 
   @@index([identifier])
   @@map("verification")
+}
+
+// 案件の動き（作成・フェーズの前進と後退・受注・失注）。追記だけで更新・削除しない
+model DealEvent {
+  id            Int      @id @default(autoincrement())
+  dealId        Int
+  deal          Deal     @relation(fields: [dealId], references: [id])
+  kind          String
+  fromStage     String?
+  toStage       String?
+  changedById   String
+  changedByName String
+  createdAt     DateTime @default(now())
+
+  @@index([dealId])
+  @@index([createdAt])
+  @@map("deal_events")
+}
+
+// 商談の記録に、上司や同僚が残すアドバイス・フィードバック
+model MeetingComment {
+  id         Int      @id @default(autoincrement())
+  meetingId  Int
+  meeting    Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  body       String
+  authorId   String
+  authorName String
+  createdAt  DateTime @default(now())
+
+  @@index([meetingId])
+  @@map("meeting_comments")
 }

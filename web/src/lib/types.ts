@@ -1,4 +1,5 @@
-import type { ContractType, DealStatus } from "@server/deals/rules";
+import type { ContractType, DealStage, DealStatus, Movement } from "@server/deals/rules";
+import type { DealSource, Industry, LostReason } from "@server/config/sales";
 import type { QuoteStatus } from "@server/quotes/rules";
 import type { CooperationLevel, OverviewTextKey, RiskLevel } from "@server/overviews/rules";
 
@@ -13,6 +14,7 @@ export type Customer = {
   email: string | null;
   phone: string | null;
   memo: string | null;
+  industry: Industry | "";
   archivedAt: string | null;
   version: number;
   _count?: { deals: number };
@@ -24,12 +26,20 @@ export type Deal = {
   name: string;
   salesRepId: number;
   status: DealStatus;
+  stage: DealStage;
+  stageChangedAt: string;
+  expectedAmount: number | null;
+  expectedCloseMonth: string | null;
+  source: DealSource | "";
+  lostReason: LostReason | null;
+  lostNote: string;
   version: number;
   updatedAt: string;
   wonAt: string | null;
   customer: Customer;
   salesRep: Member;
   overview?: Pick<DealOverview, "cooperationLevel" | "riskLevel"> | null;
+  quotes?: { status: string; subtotal: number }[];
 };
 
 export type DealContract = {
@@ -52,7 +62,8 @@ export type Meeting = {
   updatedAt: string;
 };
 
-export type MeetingWithDeal = Meeting & { deal: Deal };
+export type MeetingComment = { id: number; body: string; authorName: string; createdAt: string };
+export type MeetingWithDeal = Meeting & { deal: Deal; comments?: MeetingComment[] };
 
 export type GoogleMeetStatus = { enabled: boolean; accountId: string | null; canReadMeet: boolean };
 
@@ -95,7 +106,28 @@ export type QuoteLine = {
 
 export type QuoteHistory = { id: number; fromStatus: QuoteStatus | null; toStatus: QuoteStatus; changedByName: string; changedAt: string };
 
-export type DealDetail = Omit<Deal, "overview"> & {
+export type DealEvent = {
+  id: number;
+  kind: "created" | "stage" | "won" | "lost";
+  fromStage: DealStage | null;
+  toStage: DealStage | null;
+  changedByName: string;
+  createdAt: string;
+};
+
+export type SimilarDeal = {
+  id: number;
+  name: string;
+  status: DealStatus;
+  stage: DealStage;
+  lostReason: LostReason | null;
+  customer: { companyName: string };
+  salesRep: { name: string };
+};
+
+export type DealDetail = Omit<Deal, "overview" | "quotes"> & {
+  events: DealEvent[];
+  similar: SimilarDeal[];
   contract: DealContract | null;
   quotes: Quote[];
   meetings: Meeting[];
@@ -108,7 +140,38 @@ export type QuoteDetail = QuoteWithDeal & { lines: QuoteLine[]; history: QuoteHi
 export type Dashboard = {
   openDeals: number;
   submittedQuotes: { count: number; total: number };
-  wonThisMonth: number;
+  wonThisMonth: { count: number; amount: number };
+  wonThisFiscalYear: { fiscalYear: number; count: number; amount: number };
+  recentMovements: {
+    days: number;
+    items: {
+      id: number;
+      movement: Movement;
+      fromStage: DealStage | null;
+      toStage: DealStage | null;
+      changedByName: string;
+      createdAt: string;
+      deal: { id: number; name: string; customer: { companyName: string } };
+    }[];
+  };
+  pipeline: Pipeline;
   recentMeetings: (Meeting & { deal: { id: number; name: string } })[];
   recentDeals: Deal[];
+};
+
+type PipelineCell = { stage: DealStage; count: number; amount: number };
+
+export type Pipeline = {
+  currentMonth: string;
+  stages: (PipelineCell & { unpriced: number })[];
+  months: { key: string; label: string; stages: PipelineCell[] }[];
+};
+export type OutcomeRow = { key: string; total: number; open: number; won: number; lost: number; wonAmount: number; winRate: number | null };
+
+export type Insights = {
+  fiscalYear: number;
+  byIndustry: OutcomeRow[];
+  bySource: OutcomeRow[];
+  lostByStage: { stage: DealStage; count: number }[];
+  lostByReason: { reason: LostReason; count: number }[];
 };

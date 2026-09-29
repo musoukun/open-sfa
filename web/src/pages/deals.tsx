@@ -3,21 +3,27 @@ import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DealBadge, DifficultyBadge, EmptyRow, PageHeader, SimpleSelect } from "@/components/common";
+import { DealProgressBadge, DifficultyBadge, EmptyRow, PageHeader, SimpleSelect } from "@/components/common";
 import { NewDealDialog } from "@/components/new-deal-dialog";
 import { api } from "@/lib/api";
 import { useMembers } from "@/lib/hooks";
-import { shortDate } from "@/lib/format";
+import { shortDate, yenShort } from "@/lib/format";
 import type { Deal } from "@/lib/types";
-import { DEAL_STATUSES, DEAL_STATUS_LABELS } from "@server/deals/rules";
+import { DEAL_STAGES, DEAL_STAGE_LABELS, DEAL_STATUSES, DEAL_STATUS_LABELS, expectedDealAmount } from "@server/deals/rules";
+
+const amountOf = (d: Deal) => {
+  const amount = expectedDealAmount(d.expectedAmount, d.quotes ?? []);
+  return amount === null ? "—" : yenShort(amount);
+};
 
 export function DealsPage() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const status = params.get("status") ?? "";
   const salesRepId = params.get("salesRepId") ?? "";
+  const stage = params.get("stage") ?? "";
   const { data: members = [] } = useMembers();
-  const query = new URLSearchParams({ ...(status && { status }), ...(salesRepId && { salesRepId }) }).toString();
+  const query = new URLSearchParams({ ...(status && { status }), ...(salesRepId && { salesRepId }), ...(stage && { stage }) }).toString();
   const { data: deals } = useQuery({ queryKey: ["deals", query], queryFn: () => api<Deal[]>(`/deals?${query}`) });
 
   const setParam = (key: string, value: string) => {
@@ -41,6 +47,15 @@ export function DealsPage() {
             ))}
           </TabsList>
         </Tabs>
+        <div className="flex flex-wrap gap-2">
+        <SimpleSelect
+          className="w-40"
+          aria-label="フェーズで絞り込む"
+          value={stage}
+          onChange={(v) => setParam("stage", v)}
+          options={DEAL_STAGES.map((s) => ({ value: s, label: DEAL_STAGE_LABELS[s] }))}
+          noneLabel="すべてのフェーズ"
+        />
         <SimpleSelect
           className="w-48"
           aria-label="営業担当で絞り込む"
@@ -49,6 +64,7 @@ export function DealsPage() {
           options={members.map((m) => ({ value: String(m.id), label: m.name }))}
           noneLabel="すべての営業担当"
         />
+        </div>
       </div>
       <Card className="py-0">
         <Table>
@@ -58,12 +74,13 @@ export function DealsPage() {
               <TableHead>顧客</TableHead>
               <TableHead>営業担当</TableHead>
               <TableHead>状態</TableHead>
+              <TableHead className="text-right">見込み金額</TableHead>
               <TableHead>難易度</TableHead>
               <TableHead className="text-right">更新</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {deals?.length === 0 && <EmptyRow colSpan={6}>該当する案件はありません</EmptyRow>}
+            {deals?.length === 0 && <EmptyRow colSpan={7}>該当する案件はありません</EmptyRow>}
             {deals?.map((d) => (
               <TableRow key={d.id} className="cursor-pointer" onClick={() => navigate(`/deals/${d.id}`)}>
                 <TableCell className="font-medium">{d.name}</TableCell>
@@ -72,8 +89,9 @@ export function DealsPage() {
                 </TableCell>
                 <TableCell>{d.salesRep.name}</TableCell>
                 <TableCell>
-                  <DealBadge status={d.status} />
+                  <DealProgressBadge status={d.status} stage={d.stage} />
                 </TableCell>
+                <TableCell className="text-right tabular-nums">{amountOf(d)}</TableCell>
                 <TableCell>
                   <DifficultyBadge cooperation={d.overview?.cooperationLevel ?? null} risk={d.overview?.riskLevel ?? null} />
                 </TableCell>

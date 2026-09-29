@@ -2,7 +2,8 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { prisma } from "../db";
 import { Prisma } from "../generated/prisma/client";
-import { validate } from "../lib/validate";
+import { choiceOrEmpty, validate } from "../lib/validate";
+import { INDUSTRIES } from "../config/sales";
 import { CONFLICT_MESSAGE, type AppEnv } from "../lib/session";
 import { buildMatchKey } from "./rules";
 
@@ -15,6 +16,7 @@ const customerSchema = z.object({
   email: z.email("メールアドレスの形式が正しくありません").optional(),
   phone: optionalText,
   memo: optionalText,
+  industry: choiceOrEmpty(INDUSTRIES, "業種の選び方が正しくありません"),
 });
 
 const versionSchema = z.object({ version: z.number().int() });

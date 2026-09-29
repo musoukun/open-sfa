@@ -9,3 +9,10 @@ export const dateTime = (iso: string) => JST_DATETIME.format(new Date(iso));
 export const shortDate = (iso: string) => JST_SHORT.format(new Date(iso));
 
 export const initials = (name: string) => name.trim().slice(0, 2);
+
+// グラフの目盛りや要約用。1万円未満は円のまま出す
+export const yenShort = (n: number) => {
+  if (n >= 100_000_000) return `${(n / 100_000_000).toLocaleString("ja-JP", { maximumFractionDigits: 1 })}億円`;
+  if (n >= 10_000) return `${Math.round(n / 10_000).toLocaleString("ja-JP")}万円`;
+  return `${n.toLocaleString("ja-JP")}円`;
+};

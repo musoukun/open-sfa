@@ -7,9 +7,11 @@ import { customersRoutes } from "./customers/routes";
 import { dealsRoutes } from "./deals/routes";
 import { quotesRoutes } from "./quotes/routes";
 import { dashboardRoutes } from "./dashboard/routes";
+import { insightsRoutes } from "./insights/routes";
 import { meetingsRoutes } from "./meetings/routes";
 import { googleMeetRoutes } from "./google-meet/routes";
 import { overviewRoutes } from "./overviews/routes";
+import { feedbackRoutes } from "./feedback/routes";
 import { setupRoutes } from "./setup/routes";
 import { approvalRoutes, invitationsRoutes, signupRoutes } from "./invitations/routes";
 import { APIError } from "better-auth/api";
@@ -24,8 +26,10 @@ const api = new Hono<AppEnv>()
   .route("/deals", overviewRoutes)
   .route("/quotes", quotesRoutes)
   .route("/dashboard", dashboardRoutes)
+  .route("/insights", insightsRoutes)
   .route("/meetings", meetingsRoutes)
   .route("/google-meet", googleMeetRoutes)
+  .route("/feedback", feedbackRoutes)
   .route("/invitations", invitationsRoutes)
   .route("/admin/users", approvalRoutes);
 

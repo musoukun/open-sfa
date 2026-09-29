@@ -2,6 +2,7 @@ import { Navigate, Outlet } from "react-router";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AppSidebar } from "@/components/app-sidebar";
+import { FeedbackWidget } from "@/components/feedback-widget";
 import { authClient } from "@/lib/auth-client";
 
 export function AppLayout() {
@@ -27,6 +28,7 @@ export function AppLayout() {
           <Outlet />
         </main>
       </SidebarInset>
+      <FeedbackWidget />
     </SidebarProvider>
   );
 }
